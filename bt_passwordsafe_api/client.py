@@ -118,7 +118,12 @@ class PasswordSafeClient:
             BeyondTrustAuthenticationException: If authentication fails.
         """
         # Set the API key in the request header
-        auth_header = f"PS-Auth key={self._options.api_key}; runas={self._options.run_as_username}; pwd={self._options.run_as_password};"
+        auth_header = f"PS-Auth key={self._options.api_key}; runas={self._options.run_as_username}"
+        
+        # Only add password if it's provided
+        if self._options.run_as_password:
+            auth_header += f"; pwd=[{self._options.run_as_password}]"
+            
         self._session.headers.update({'Authorization': auth_header})
 
         # Make a simple request to verify the API key works

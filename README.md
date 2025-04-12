@@ -163,7 +163,7 @@ print(f"Expires: {request_result.expiration_date}")
 | base_url | The base URL of your BeyondTrust Password Safe API | Required |
 | api_key | API key for authentication | Required for API Key auth |
 | run_as_username | Username for run-as authentication | Required for API Key auth |
-| run_as_password | Password for run-as authentication | Required for API Key auth |
+| run_as_password | Password for run-as authentication | Optional |
 | use_oauth | Whether to use OAuth authentication | False |
 | oauth_client_id | OAuth client ID | Required for OAuth auth |
 | oauth_client_secret | OAuth client secret | Required for OAuth auth |
