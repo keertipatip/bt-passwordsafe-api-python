@@ -11,6 +11,7 @@ A Python package for interacting with BeyondTrust Password Safe API. This packag
 - 🔑 **Password Retrieval**: Get passwords with automatic request handling and conflict resolution
 - 🧩 **Error Handling**: Gracefully handles API errors including 409 Conflict scenarios
 - 📝 **Detailed Logging**: Comprehensive logging for troubleshooting and auditing
+- 🔐 **Secret Safe**: Access and retrieve secrets from BeyondTrust Secret Safe
 - ⚡ **Full Async Support**: Complete async/await pattern implementation for all operations
 - 🛡️ **Type Safety**: Type hints for all API interactions
 
@@ -57,14 +58,14 @@ print(f"Expires In: {auth_result.expires_in} seconds")
 
 # Get password by account ID
 try:
-    password = client.get_managed_account_password_by_id("50")
+    password = client.get_managed_account_password_by_id("50", reason="API Example")
     print(f"Password: {password.password}")
     print(f"Request ID: {password.request_id}")
     print(f"Expires: {password.expiration_date}")
     
     # Get password by request ID (useful when you've already created a request)
     request_id = "12345"  # Request ID from a previous request
-    password_by_request_id = client.get_managed_account_password_by_request_id(request_id)
+    password_by_request_id = client.get_managed_account_password_by_request_id(request_id, reason="API Example")
     print(f"Password: {password_by_request_id.password}")
     
     # Check in the password when done
@@ -94,7 +95,7 @@ with PasswordSafeClient(options) as client:
     client.authenticate()
     
     # Get password by account name and system name
-    password = client.get_managed_account_password_by_name("admin", "DC01")
+    password = client.get_managed_account_password_by_name("admin", "DC01", reason="Context Manager Example")
     print(f"Password: {password.password}")
     
     # Check in the password when done
@@ -109,7 +110,22 @@ The SDK automatically handles cases where a password request already exists (409
 
 ```python
 # This will work even if there's already an active request for this account
-password = client.get_managed_account_password_by_id("50")
+password = client.get_managed_account_password_by_id("50", reason="Automated Task")
+```
+
+### Using the Reason Parameter
+
+All password retrieval methods support an optional reason parameter that allows you to document why the password is being accessed. This is useful for auditing and compliance purposes.
+
+```python
+# Get password by account ID with reason
+password = client.get_managed_account_password_by_id("50", reason="Monthly Maintenance")
+
+# Get password by account name with reason
+password = client.get_managed_account_password_by_name("admin", "DC01", reason="Emergency Access")
+
+# Get password by request ID with reason
+password = client.get_managed_account_password_by_request_id("12345", reason="Scheduled Task")
 ```
 
 ### Retrieving Managed Accounts
@@ -161,6 +177,26 @@ print(f"Request ID: {request_result.request_id}")
 print(f"Expires: {request_result.expiration_date}")
 ```
 
+### Working with Secret Safe
+
+```python
+# Get a secret by its ID
+secret_id = "12345678-1234-1234-1234-123456789012"  # UUID format
+secret = client.get_secret_by_id(secret_id)
+if secret:
+    print(f"Secret Title: {secret.title}")
+    print(f"Secret Type: {secret.secret_type}")
+    print(f"Secret Value: {secret.secret_value}")
+
+# Get a secret by its name (title)
+secret_name = "Database Connection String"
+secret = client.get_secret_by_name(secret_name)
+if secret:
+    print(f"Secret ID: {secret.id}")
+    print(f"Secret Type: {secret.secret_type}")
+    print(f"Secret Value: {secret.secret_value}")
+```
+
 ## Configuration Options
 
 | Option | Description | Default |
@@ -194,6 +230,52 @@ except BeyondTrustApiException as api_ex:
 except Exception as ex:
     print(f"Unexpected error: {ex}")
 ```
+
+## Running the Example
+
+The package includes an example script in the `TestApp` folder that demonstrates common usage patterns:
+
+1. Navigate to the TestApp folder:
+   ```bash
+   cd TestApp
+   ```
+
+2. Configure your settings in `config.json`:
+   ```json
+   {
+     "PasswordSafe": {
+       "BaseUrl": "https://your-instance.beyondtrustcloud.com/BeyondTrust/api/public/v3/",
+       "ApiKey": "your-api-key",
+       "RunAsUsername": "your-username",
+       "RunAsPassword": "your-password",
+       "UseOAuth": false,
+       "OAuthClientId": "",
+       "OAuthClientSecret": "",
+       "TimeoutSeconds": 30,
+       "DefaultPasswordDuration": 60,
+       "AutoRefreshToken": true
+     },
+     "TestSettings": {
+       "SystemId": "57",
+       "AccountId": "50",
+       "AccountName": "test",
+       "SystemName": "DC01"
+     }
+   }
+   ```
+
+3. Run the example script:
+   ```bash
+   python example.py
+   ```
+
+The example demonstrates:
+- Authentication with OAuth or API Key
+- Retrieving managed systems and accounts
+- Creating password requests with the required system_id parameter
+- Getting passwords by account ID and request ID
+- Checking in passwords
+- Proper error handling
 
 ## License
 

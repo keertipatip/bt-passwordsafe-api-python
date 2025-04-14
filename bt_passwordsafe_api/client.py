@@ -8,6 +8,7 @@ import threading
 import time
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Union, Any
+from uuid import UUID
 
 import requests
 
@@ -19,6 +20,7 @@ from bt_passwordsafe_api.models.managed_system import ManagedSystem
 from bt_passwordsafe_api.models.password_request import PasswordRequest
 from bt_passwordsafe_api.models.password_request_result import PasswordRequestResult
 from bt_passwordsafe_api.models.password_safe_options import PasswordSafeOptions
+from bt_passwordsafe_api.models.secret_safe import SecretSafe
 
 
 class PasswordSafeClient:
@@ -219,12 +221,13 @@ class PasswordSafeClient:
         if not self._auth_result or self._auth_result.is_expired:
             self.authenticate()
 
-    def get_managed_account_password_by_id(self, managed_account_id: str) -> ManagedPassword:
+    def get_managed_account_password_by_id(self, managed_account_id: str, reason: Optional[str] = None) -> ManagedPassword:
         """
         Gets a managed password by account ID.
         
         Args:
             managed_account_id (str): The ID of the managed account.
+            reason (str, optional): Optional reason for retrieving the password.
             
         Returns:
             ManagedPassword: Managed password.
@@ -250,7 +253,8 @@ class PasswordSafeClient:
                 system_id=account.managed_system_id,
                 account_id=account.managed_account_id,
                 duration_minutes=self._options.default_password_duration,
-                reason="API Password Request"
+                reason=reason or "API Password Request",
+                access_type="View"
             )
 
             # Request the password
@@ -347,7 +351,8 @@ class PasswordSafeClient:
             raise
 
     def get_managed_account_password_by_name(self, account_name: str, system_name: Optional[str] = None, 
-                                            domain_name: Optional[str] = None, is_domain_linked: bool = False) -> ManagedPassword:
+                                            domain_name: Optional[str] = None, is_domain_linked: bool = False,
+                                            reason: Optional[str] = None) -> ManagedPassword:
         """
         Gets a managed password by account name.
         
@@ -356,6 +361,7 @@ class PasswordSafeClient:
             system_name (str, optional): Name of the managed system (required if is_domain_linked is False).
             domain_name (str, optional): Name of the domain (required if is_domain_linked is True).
             is_domain_linked (bool, optional): Whether the account is domain-linked (True) or local (False).
+            reason (str, optional): Optional reason for retrieving the password.
             
         Returns:
             ManagedPassword: Managed password.
@@ -368,14 +374,15 @@ class PasswordSafeClient:
         account = self.get_managed_account_by_name(account_name, system_name, domain_name, is_domain_linked)
 
         # Now that we have the account ID, get the password
-        return self.get_managed_account_password_by_id(str(account.managed_account_id))
+        return self.get_managed_account_password_by_id(str(account.managed_account_id), reason)
 
-    def get_managed_account_password_by_request_id(self, request_id: str) -> ManagedPassword:
+    def get_managed_account_password_by_request_id(self, request_id: str, reason: Optional[str] = None) -> ManagedPassword:
         """
         Gets a managed password by request ID.
         
         Args:
             request_id (str): The ID of the password request.
+            reason (str, optional): Optional reason for retrieving the password.
             
         Returns:
             ManagedPassword: Managed password.
@@ -810,3 +817,90 @@ class PasswordSafeClient:
             return True
         except requests.RequestException as ex:
             raise BeyondTrustApiException(f"Failed to sign out: {str(ex)}", ex)
+
+    def get_secret_by_id(self, secret_id: Union[str, UUID]) -> Optional[SecretSafe]:
+        """
+        Gets a secret by its ID.
+        
+        Args:
+            secret_id (Union[str, UUID]): The ID of the secret.
+            
+        Returns:
+            Optional[SecretSafe]: The secret if found, otherwise None.
+            
+        Raises:
+            BeyondTrustApiException: If the API request fails.
+        """
+        if not secret_id:
+            raise ValueError("Secret ID cannot be null or empty")
+
+        self._ensure_authenticated()
+
+        if self._logger:
+            self._logger.info(f"Retrieving secret by ID: {secret_id}")
+
+        try:
+            response = self._session.get(
+                f"{self._options.base_url}/Secrets-Safe/Secrets/{secret_id}",
+                timeout=self._timeout
+            )
+            
+            # If the secret is not found, return None
+            if response.status_code == 404:
+                return None
+                
+            response.raise_for_status()
+            content = response.json()
+        except requests.RequestException as ex:
+            raise BeyondTrustApiException(f"Failed to retrieve secret by ID: {str(ex)}", ex)
+        except json.JSONDecodeError as ex:
+            raise BeyondTrustApiException("Failed to parse secret response", ex)
+
+        try:
+            return SecretSafe.from_dict(content)
+        except Exception as ex:
+            raise BeyondTrustApiException(f"Failed to parse secret: {str(ex)}", ex)
+
+    def get_secret_by_name(self, name: str) -> Optional[SecretSafe]:
+        """
+        Gets a secret by its name (title).
+        
+        Args:
+            name (str): The title of the secret.
+            
+        Returns:
+            Optional[SecretSafe]: The secret if found, otherwise None.
+            
+        Raises:
+            ValueError: If name is None or empty.
+            BeyondTrustApiException: If the API request fails.
+        """
+        if not name:
+            raise ValueError("Secret name cannot be null or empty")
+
+        self._ensure_authenticated()
+
+        if self._logger:
+            self._logger.info(f"Retrieving secret by name: {name}")
+
+        try:
+            response = self._session.get(
+                f"{self._options.base_url}/Secrets-Safe/Secrets",
+                params={'Title': name},
+                timeout=self._timeout
+            )
+            response.raise_for_status()
+            content = response.json()
+        except requests.RequestException as ex:
+            raise BeyondTrustApiException(f"Failed to retrieve secret by name: {str(ex)}", ex)
+        except json.JSONDecodeError as ex:
+            raise BeyondTrustApiException("Failed to parse secret response", ex)
+
+        try:
+            # The API returns a list of secrets matching the title
+            secrets = [SecretSafe.from_dict(secret_data) for secret_data in content]
+            
+            # Return the first matching secret, or None if no secrets were found
+            return secrets[0] if secrets else None
+        except Exception as ex:
+            raise BeyondTrustApiException(f"Failed to parse secret: {str(ex)}", ex)

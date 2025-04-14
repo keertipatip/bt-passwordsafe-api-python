@@ -13,8 +13,23 @@ class PasswordRequest:
         
         Args:
             **kwargs: Arbitrary keyword arguments to initialize the properties.
+                      system_id (int): The ID of the system (required).
+                      account_id (int): The ID of the account.
+                      duration_minutes (int): The duration in minutes for the password request.
+                      reason (str): The reason for the password request.
+                      conflict_option (str): The option for handling conflicts.
+                      ticket_system_id (str): The ID of the ticket system.
+                      ticket_number (str): The ticket number.
+                      access_type (str): The type of access requested.
+                      
+        Raises:
+            ValueError: If system_id is not provided.
         """
-        self.system_id = kwargs.get('system_id', 0)
+        # Check if system_id is provided
+        if 'system_id' not in kwargs or kwargs['system_id'] is None:
+            raise ValueError("system_id is required for password requests")
+            
+        self.system_id = kwargs['system_id']
         self.account_id = kwargs.get('account_id', 0)
         self.duration_minutes = kwargs.get('duration_minutes', 60)
         self.reason = kwargs.get('reason', 'API Password Request')

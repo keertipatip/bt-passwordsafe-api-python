@@ -1,0 +1,20 @@
+{
+  "PasswordSafe": {
+    "BaseUrl": "https://your-instance.beyondtrustcloud.com/BeyondTrust/api/public/v3/",
+    "ApiKey": "",
+    "RunAsUsername": "",
+    "RunAsPassword": "",
+    "UseOAuth": false,
+    "OAuthClientId": "",
+    "OAuthClientSecret": "",
+    "TimeoutSeconds": 30,
+    "DefaultPasswordDuration": 60,
+    "AutoRefreshToken": true
+  },
+  "TestSettings": {
+    "SystemId": "57",
+    "AccountId": "50",
+    "AccountName": "test",
+    "SystemName": "DC01"
+  }
+}
