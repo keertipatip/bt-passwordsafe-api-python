@@ -62,19 +62,25 @@ def main():
                 logger.info(f"Account {i+1}: {account.account_name} on {account.system_name} (ID: {account.managed_account_id})")
             
             # Get password for a specific account
-            # Uncomment and modify with actual account ID
-            # account_id = "50"
-            # logger.info(f"Getting password for account ID: {account_id}...")
-            # password = client.get_managed_account_password_by_id(account_id)
-            # logger.info(f"Retrieved password for account ID {account_id}")
-            # logger.info(f"Password: {password.password[:1]}*****")  # Show only first character for security
-            # logger.info(f"Request ID: {password.request_id}")
-            # logger.info(f"Expires: {password.expiration_date}")
+            account_id = "50"
+            logger.info(f"Getting password for account ID: {account_id}...")
+            password = client.get_managed_account_password_by_id(account_id)
+            logger.info(f"Retrieved password for account ID {account_id}")
+            logger.info(f"Password: {password.password[:1]}*****")  # Show only first character for security
+            logger.info(f"Request ID: {password.request_id}")
+            logger.info(f"Expires: {password.expiration_date}")
+            
+            # Get password by request ID
+            request_id = password.request_id  # Use the request ID from a previous request
+            logger.info(f"Getting password using request ID: {request_id}...")
+            password_by_request_id = client.get_managed_account_password_by_request_id(request_id)
+            logger.info(f"Retrieved password using request ID {request_id}")
+            logger.info(f"Password: {password_by_request_id.password[:1]}*****")  # Show only first character for security
             
             # Check in the password
-            # logger.info(f"Checking in password for request ID: {password.request_id}...")
-            # check_in_result = client.check_in_password(password.request_id, "Example script completed")
-            # logger.info(f"Check-in result: {'Success' if check_in_result else 'Failed'}")
+            logger.info(f"Checking in password for request ID: {password.request_id}...")
+            check_in_result = client.check_in_password(password.request_id, "Example script completed")
+            logger.info(f"Check-in result: {'Success' if check_in_result else 'Failed'}")
             
             # Sign out
             logger.info("Signing out...")

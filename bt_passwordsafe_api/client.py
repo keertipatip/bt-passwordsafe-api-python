@@ -306,7 +306,7 @@ class PasswordSafeClient:
                 
                 if existing_request:
                     if self._logger:
-                        self._logger.info(f"Found existing request ID: {existing_request.request_id} for account ID: {account.managed_account_id}. Retrieving password.")
+                        self._logger.info(f"Found existing request ID: {existing_request.request_id} for account ID: {managed_account_id}. Retrieving password.")
                     
                     # Get the password using the existing request ID
                     try:
@@ -369,6 +369,69 @@ class PasswordSafeClient:
 
         # Now that we have the account ID, get the password
         return self.get_managed_account_password_by_id(str(account.managed_account_id))
+
+    def get_managed_account_password_by_request_id(self, request_id: str) -> ManagedPassword:
+        """
+        Gets a managed password by request ID.
+        
+        Args:
+            request_id (str): The ID of the password request.
+            
+        Returns:
+            ManagedPassword: Managed password.
+            
+        Raises:
+            ValueError: If request_id is None or empty.
+            BeyondTrustApiException: If the API request fails.
+        """
+        if not request_id:
+            raise ValueError("Request ID cannot be null or empty")
+
+        self._ensure_authenticated()
+
+        if self._logger:
+            self._logger.info(f"Retrieving managed account password by request ID: {request_id}")
+
+        # Get the password using the request ID
+        try:
+            response = self._session.get(
+                f"{self._options.base_url}/Credentials/{request_id}",
+                timeout=self._timeout
+            )
+            response.raise_for_status()
+            content = response.text
+        except requests.RequestException as ex:
+            raise BeyondTrustApiException(f"Failed to get password with request ID {request_id}: {str(ex)}", ex)
+
+        try:
+            # First try to parse as a complex object
+            password_data = json.loads(content)
+            password = ManagedPassword(
+                password=password_data.get('Password', ''),
+                request_id=request_id,
+                # Account ID and System ID are not known when retrieving by request ID
+                account_id=None,
+                system_id=None,
+                expiration_date=None
+            )
+            return password
+        except json.JSONDecodeError:
+            # If complex object deserialization fails, try parsing as a simple password string
+            try:
+                # The API might just return the password as a plain string
+                raw_password = content.strip('"')
+                password = ManagedPassword(
+                    password=raw_password,
+                    request_id=request_id,
+                    # Account ID and System ID are not known when retrieving by request ID
+                    account_id=None,
+                    system_id=None,
+                    expiration_date=None
+                )
+                return password
+            except Exception as ex:
+                # If all parsing attempts fail, throw an exception
+                raise BeyondTrustApiException(f"Failed to parse password response: {content}", ex)
 
     def get_managed_account_by_name(self, account_name: str, system_name: Optional[str] = None, 
                                    domain_name: Optional[str] = None, is_domain_linked: bool = False) -> ManagedAccount:

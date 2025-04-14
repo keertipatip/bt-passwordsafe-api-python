@@ -62,6 +62,11 @@ try:
     print(f"Request ID: {password.request_id}")
     print(f"Expires: {password.expiration_date}")
     
+    # Get password by request ID (useful when you've already created a request)
+    request_id = "12345"  # Request ID from a previous request
+    password_by_request_id = client.get_managed_account_password_by_request_id(request_id)
+    print(f"Password: {password_by_request_id.password}")
+    
     # Check in the password when done
     client.check_in_password(password.request_id, "Task completed")
 except Exception as e:
